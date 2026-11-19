@@ -9,6 +9,7 @@ import type { Database } from './db.js';
 import type { Config } from './config.js';
 import type { createIdentityVerifier } from './identity.js';
 import { getProfile, profileSchema, saveProfile } from './profile.js';
+import { getBibleBooks, getBibleChapter, searchBible, getDailyVerse } from './bible.js';
 
 type Context = { Variables: { userId: string } };
 type Services = { config: Config; pool: Database; verifyIdentity: ReturnType<typeof createIdentityVerifier> };
@@ -22,6 +23,33 @@ export function createApp({ config, pool, verifyIdentity }: Services) {
   }));
   app.use('/api/*', bodyLimit({ maxSize: 3 * 1024 * 1024, onError: c => c.json({ error: 'Le fichier est trop volumineux.' }, 413) }));
   app.get('/health', c => c.json({ status: 'ok' }));
+
+  // Routes publiques Bible (Louis Segond 1910)
+  app.get('/api/bible/books', c => {
+    return c.json(getBibleBooks());
+  });
+
+  app.get('/api/bible/chapters/:bookId/:chapter', c => {
+    const bookId = c.req.param('bookId').toLowerCase();
+    const chapter = parseInt(c.req.param('chapter'), 10);
+    if (isNaN(chapter)) return c.json({ error: 'Numéro de chapitre invalide.' }, 400);
+    const data = getBibleChapter(bookId, chapter);
+    if (!data) return c.json({ error: 'Chapitre ou livre introuvable.' }, 404);
+    return c.json(data);
+  });
+
+  app.get('/api/bible/search', c => {
+    const q = c.req.query('q') || '';
+    const testament = c.req.query('testament') as 'AT' | 'NT' | undefined;
+    const bookId = c.req.query('bookId');
+    const limit = c.req.query('limit') ? parseInt(c.req.query('limit')!, 10) : 20;
+    const offset = c.req.query('offset') ? parseInt(c.req.query('offset')!, 10) : 0;
+    return c.json(searchBible(q, { testament, bookId, limit, offset }));
+  });
+
+  app.get('/api/bible/daily', c => {
+    return c.json(getDailyVerse());
+  });
 
   app.use('/api/me/*', async (c, next) => {
     c.header('Cache-Control', 'no-store');

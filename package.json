@@ -9,10 +9,12 @@
   "scripts": {
     "dev": "node --watch --import tsx src/server.ts",
     "start": "node dist/server.js",
-    "build": "tsc",
+    "build": "npm run db:bible && tsc",
     "typecheck": "tsc --noEmit",
     "db:check": "node --import tsx src/db-check.ts",
+    "db:bible": "node --import tsx scripts/build-bible-db.ts",
     "db:migrate": "node --import tsx src/migrate.ts",
+    "pretest": "npm run db:bible",
     "test": "node --import tsx --test --test-concurrency=1 tests/*.test.ts",
     "test:integration": "RUN_DATABASE_TESTS=1 node --import tsx --test --test-concurrency=1 tests/*.integration.test.ts"
   },
