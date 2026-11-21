@@ -10,6 +10,14 @@ import type { Config } from './config.js';
 import type { createIdentityVerifier } from './identity.js';
 import { getProfile, profileSchema, saveProfile } from './profile.js';
 import { getBibleBooks, getBibleChapter, searchBible, getDailyVerse } from './bible.js';
+import {
+  getAllBreakfasts,
+  getTodayBreakfast,
+  getBreakfastById,
+  generateBreakfastPdfBuffer,
+  generateSampleAudioBuffer,
+  generateSampleVideoBuffer,
+} from './breakfasts.js';
 
 type Context = { Variables: { userId: string } };
 type Services = { config: Config; pool: Database; verifyIdentity: ReturnType<typeof createIdentityVerifier> };
@@ -50,6 +58,52 @@ export function createApp({ config, pool, verifyIdentity }: Services) {
   app.get('/api/bible/daily', c => {
     const date = c.req.query('date');
     return c.json(getDailyVerse(date));
+  });
+
+  // Routes publiques Méditations & Breakfasts
+  app.get('/api/breakfasts', c => {
+    return c.json(getAllBreakfasts(config.API_URL));
+  });
+
+  app.get('/api/breakfasts/today', c => {
+    return c.json(getTodayBreakfast(config.API_URL));
+  });
+
+  app.get('/api/breakfasts/:id', c => {
+    const id = c.req.param('id');
+    const item = getBreakfastById(id, config.API_URL);
+    if (!item) return c.json({ error: 'Breakfast introuvable.' }, 404);
+    return c.json(item);
+  });
+
+  app.get('/api/breakfasts/:id/download/:type', c => {
+    const id = c.req.param('id');
+    const type = c.req.param('type');
+    const item = getBreakfastById(id, config.API_URL);
+    if (!item) return c.json({ error: 'Breakfast introuvable.' }, 404);
+
+    if (type === 'pdf') {
+      const pdf = generateBreakfastPdfBuffer(item);
+      c.header('Content-Type', 'application/pdf');
+      c.header('Content-Disposition', `attachment; filename="koinonia-breakfast-${item.id}.pdf"`);
+      return c.body(new Uint8Array(pdf));
+    }
+
+    if (type === 'audio') {
+      const audio = generateSampleAudioBuffer(item);
+      c.header('Content-Type', 'audio/mpeg');
+      c.header('Content-Disposition', `attachment; filename="koinonia-breakfast-${item.id}.mp3"`);
+      return c.body(new Uint8Array(audio));
+    }
+
+    if (type === 'video') {
+      const video = generateSampleVideoBuffer(item);
+      c.header('Content-Type', 'video/mp4');
+      c.header('Content-Disposition', `attachment; filename="koinonia-breakfast-${item.id}.mp4"`);
+      return c.body(new Uint8Array(video));
+    }
+
+    return c.json({ error: 'Type de média non supporté. Valeurs acceptées : pdf, audio, video.' }, 400);
   });
 
   app.use('/api/me/*', async (c, next) => {
