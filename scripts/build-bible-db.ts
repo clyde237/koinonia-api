@@ -95,6 +95,7 @@ export function buildDatabase() {
   const db = new DatabaseSync(TARGET_DB);
 
   db.exec(`
+    DROP TABLE IF EXISTS daily_verses;
     DROP TABLE IF EXISTS bible_verses;
     DROP TABLE IF EXISTS bible_books;
 
@@ -120,6 +121,21 @@ export function buildDatabase() {
 
     CREATE INDEX idx_verses_lookup ON bible_verses(book_id, chapter, number);
     CREATE INDEX idx_verses_norm ON bible_verses(text_normalized);
+
+    CREATE TABLE daily_verses (
+      date TEXT PRIMARY KEY,
+      verse_id INTEGER NOT NULL,
+      book_id TEXT NOT NULL,
+      chapter INTEGER NOT NULL,
+      number INTEGER NOT NULL,
+      text TEXT NOT NULL,
+      book_name TEXT NOT NULL,
+      book_abbr TEXT NOT NULL,
+      testament TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (verse_id) REFERENCES bible_verses(id)
+    );
+    CREATE INDEX idx_daily_verses_date ON daily_verses(date);
   `);
 
   const insertBook = db.prepare(`
