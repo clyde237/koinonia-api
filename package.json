@@ -14,6 +14,7 @@
     "db:check": "node --import tsx src/db-check.ts",
     "db:bible": "node --import tsx scripts/build-bible-db.ts",
     "db:migrate": "node --import tsx src/migrate.ts",
+    "cron:daily-verse": "node --import tsx scripts/cron-daily-verse.ts",
     "pretest": "npm run db:bible",
     "test": "node --import tsx --test --test-concurrency=1 tests/*.test.ts",
     "test:integration": "RUN_DATABASE_TESTS=1 node --import tsx --test --test-concurrency=1 tests/*.integration.test.ts"

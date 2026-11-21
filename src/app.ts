@@ -48,7 +48,8 @@ export function createApp({ config, pool, verifyIdentity }: Services) {
   });
 
   app.get('/api/bible/daily', c => {
-    return c.json(getDailyVerse());
+    const date = c.req.query('date');
+    return c.json(getDailyVerse(date));
   });
 
   app.use('/api/me/*', async (c, next) => {

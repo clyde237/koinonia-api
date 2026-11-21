@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getBibleBooks, getBibleBook, getBibleChapter, searchBible, getDailyVerse } from '../src/bible.js';
+import { runDailyVerseCron } from '../src/cron.js';
 
 test('Bible API - should retrieve all 66 books in canon order', () => {
   const books = getBibleBooks();
@@ -59,10 +60,33 @@ test('Bible API - search should find known verses', () => {
   assert.ok(foundJean15, 'Jean 15 should be found');
 });
 
-test('Bible API - daily verse should return valid scripture', () => {
-  const daily = getDailyVerse();
-  assert.ok(daily);
-  assert.equal(daily.book_id, 'jean');
-  assert.equal(daily.chapter, 15);
-  assert.equal(daily.number, 5);
+test('Bible API - daily verse should return valid scripture and be idempotent for a given date', () => {
+  const testDate = '2026-12-25';
+  const daily1 = getDailyVerse(testDate);
+  assert.ok(daily1);
+  assert.equal(daily1.date, testDate);
+  assert.ok(daily1.book_id);
+  assert.ok(daily1.bookId);
+  assert.ok(daily1.text.length >= 30);
+  assert.ok(daily1.chapter > 0);
+  assert.ok(daily1.number > 0);
+
+  // Appel consécutif pour la même date : doit retourner exactement le même verset
+  const daily2 = getDailyVerse(testDate);
+  assert.equal(daily2.date, daily1.date);
+  assert.equal(daily2.book_id, daily1.book_id);
+  assert.equal(daily2.chapter, daily1.chapter);
+  assert.equal(daily2.number, daily1.number);
+  assert.equal(daily2.text, daily1.text);
+});
+
+test('Bible API - cron job should generate and verify daily verses ahead', () => {
+  const result = runDailyVerseCron({ daysAhead: 3 });
+  assert.ok(result.generated.length >= 3);
+  assert.ok(result.summary.includes('['));
+  for (const item of result.generated) {
+    assert.ok(item.date);
+    assert.ok(item.text);
+    assert.ok(item.bookName);
+  }
 });
